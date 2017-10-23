@@ -262,11 +262,31 @@
   //     bla: "even more stuff"
   //   }); // obj1 now contains key1, key2, key3 and bla
   _.extend = function(obj) {
+    //Input: an unknown number of objects with an unknown number of properties
+    //Output: the first object, modified to have all properties of all the other objects
+    //Assume: only objects will be put into the function
+    //Assume: it's okay to overwrite keys/values
+    //Starting at the 2nd object, go over all the keys in each object
+    _.each(arguments, function(object) {
+      _.each(object, function(value, key) {
+    //Add each key/value pair to the first object
+        obj[key] = value;
+      });
+    });
+    return obj;
   };
 
   // Like extend, but doesn't ever overwrite a key that already
   // exists in obj
   _.defaults = function(obj) {
+    _.each(arguments, function(object) {
+      _.each(object, function(value, key) {
+        if (obj[key] === undefined) {
+          obj[key] = value;
+        }
+      });
+    });
+    return obj;
   };
 
 
@@ -289,11 +309,19 @@
 
     // TIP: We'll return a new function that delegates to the old one, but only
     // if it hasn't been called before.
+
+// Since _.once is not a method on a specified object, it's effectively a method on the global object
+// It's "this" value will refer to the global object
+// ".apply" will overrwite the "this" value for the function it's called on (aka "func") 
+// with the "this" value of _.once (aka the global object).
+// So all the variables of "func" will be attached to the global object
+// When "func" is called a second time, the "alreadyCalled" variable from before is still available.
+
     return function() {
       if (!alreadyCalled) {
         // TIP: .apply(this, arguments) is the standard way to pass on all of the
         // infromation from one function call to another.
-        result = func.apply(this, arguments);
+        result = func.apply(this, arguments); //arguments refers to the arguments of func
         alreadyCalled = true;
       }
       // The new function always returns the originally computed result.
@@ -310,6 +338,21 @@
   // already computed the result for the given argument and return that value
   // instead if possible.
   _.memoize = function(func) {
+    //var alreadyCalled = false;
+    var result;
+    var resultsCach = []; //stores results from each call
+    var argumentsCach = []; //stores arguments from each call
+    return function() {
+      for (var i = 0; i <= argumentsCach.length; i++) {
+        if (JSON.stringify(argumentsCach[i]) !== JSON.stringify(arguments)) { //checks if arguments have been called
+            result = func.apply(this, arguments); // decorates func w/ lines 346-50, so it consults the caches
+            resultsCach.push(result); //adds result to result cach
+            argumentsCach.push(arguments); //adds arguments to arguments cach
+            return result; // returns new result
+        }
+        return resultsCach[i]; // returns stored result
+      }
+    };
   };
 
   // Delays a function for the given number of milliseconds, and then calls
@@ -319,7 +362,13 @@
   // parameter. For example _.delay(someFunction, 500, 'a', 'b') will
   // call someFunction('a', 'b') after 500ms
   _.delay = function(func, wait) {
+    arguments[0] = func;
+    arguments[1] = wait;
+    //iterate over arguments, starting at 2, passing each one to setTimeout separately
+    return setTimeout(func, wait, arguments[2], arguments[3]);
   };
+
+
 
 
   /**
@@ -333,6 +382,29 @@
   // input array. For a tip on how to make a copy of an array, see:
   // http://mdn.io/Array.prototype.slice
   _.shuffle = function(array) {
+    //make a copy of the whole array
+    var randomizedArray = array.slice(0, array.length);
+    //create an pool of all the indexies
+    var indexPool = [];
+    for (var i = 0; i < randomizedArray.length; i++) {
+      indexPool.push(i);
+    }
+    //iterate over the copy
+    for (var j = 0; j < randomizedArray.length; j++) {
+    //use math.random pick an index from the pool
+    var randomIndex = pickIndex(indexPool);
+    //switch the value of the current index with the random index
+    var tempValue = randomizedArray[j];
+    randomizedArray[j] = randomizedArray[randomIndex];
+    randomizedArray[randomIndex] = tempValue;
+    //after a random inex is used, remove it from the index pool
+    indexPool.splice(randomIndex,1);
+    }
+    
+    function pickIndex(indexPool) {
+      return Math.floor(Math.random() * indexPool.length);
+    };
+    return randomizedArray;
   };
 
 
